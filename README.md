@@ -9,7 +9,7 @@ A single script to update all package managers and global packages on macOS, wit
 | Homebrew formulae | `brew update && brew upgrade` |
 | Homebrew casks | `brew upgrade --cask` *(requires `--casks`)* |
 | npm global packages | `npm update -g` |
-| pip3 packages | `pip3 install --upgrade <outdated>` |
+| pip3 packages | `pip3 install --upgrade --break-system-packages <outdated>` (one at a time) |
 | Ruby gems | `gem update` |
 | Rust toolchains | `rustup update` |
 | Mac App Store apps | `mas upgrade` *(requires [`mas`](https://github.com/mas-cli/mas))* |

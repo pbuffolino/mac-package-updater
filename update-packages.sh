@@ -22,7 +22,7 @@
 #   Homebrew formulae   brew update && brew upgrade
 #   Homebrew casks      brew upgrade --cask            (requires --casks)
 #   npm globals         npm update -g
-#   pip3 packages       pip3 install --upgrade <outdated>
+#   pip3 packages       pip3 install --upgrade --break-system-packages <outdated>
 #   Ruby gems           gem update
 #   rustup toolchains   rustup update
 #   mas (App Store)     mas upgrade
@@ -227,29 +227,33 @@ fi
 if $HAS_PIP; then
   log "Upgrading pip3 packages..."
   if $DRY_RUN; then
-    echo "      [dry-run] pip3 install --upgrade <outdated packages>"
+    echo "      [dry-run] pip3 install --upgrade --break-system-packages <outdated packages>"
     pip3 list --outdated --format=columns 2>/dev/null | tail -n +3 \
       | awk '{print $1, $2, "→", $3}' \
       | sed 's/^/      [dry-run] would upgrade: /' || true
   else
     outdated=$(pip3 list --outdated --format=freeze 2>/dev/null | cut -d= -f1 || true)
     if [[ -n "$outdated" ]]; then
-      if $SKIP_MAJOR; then
-        while IFS= read -r line; do
-          [[ -z "$line" || "$line" == Package* || "$line" == ---* ]] && continue
-          pkg_name=$(echo "$line" | awk '{print $1}')
-          old_ver=$(echo "$line"  | awk '{print $2}')
-          new_ver=$(echo "$line"  | awk '{print $3}')
-          if is_major_bump "$old_ver" "$new_ver"; then
-            SKIPPED_MAJOR+=("pip:${pkg_name} ${old_ver} → ${new_ver}")
-            warn "Skipped major bump: ${pkg_name} ${old_ver} → ${new_ver}"
-          else
-            pip3 install --upgrade "$pkg_name" 2>&1 | sed 's/^/      /' || true
-          fi
-        done < <(pip3 list --outdated --format=columns 2>/dev/null | tail -n +3 || true)
-      else
-        echo "$outdated" | xargs pip3 install --upgrade 2>&1 | sed 's/^/      /' || true
-      fi
+      # Upgraded one package at a time (not as a single batch install) so a
+      # package Homebrew manages inside pip3's site-packages (no pip RECORD
+      # file, e.g. a formula's Python dependency) can't abort the whole
+      # transaction and silently take every other package down with it.
+      while IFS= read -r line; do
+        [[ -z "$line" || "$line" == Package* || "$line" == ---* ]] && continue
+        pkg_name=$(echo "$line" | awk '{print $1}')
+        old_ver=$(echo "$line"  | awk '{print $2}')
+        new_ver=$(echo "$line"  | awk '{print $3}')
+        if $SKIP_MAJOR && is_major_bump "$old_ver" "$new_ver"; then
+          SKIPPED_MAJOR+=("pip:${pkg_name} ${old_ver} → ${new_ver}")
+          warn "Skipped major bump: ${pkg_name} ${old_ver} → ${new_ver}"
+          continue
+        fi
+        if pip3 install --upgrade --break-system-packages "$pkg_name" 2>&1 | sed 's/^/      /'; then
+          :
+        else
+          warn "pip3: failed to upgrade ${pkg_name} — it may be managed by Homebrew rather than pip"
+        fi
+      done < <(pip3 list --outdated --format=columns 2>/dev/null | tail -n +3 || true)
     else
       ok "pip3 — all packages already up to date"
     fi
