@@ -26,6 +26,7 @@
 #   Ruby gems           gem update
 #   rustup toolchains   rustup update
 #   mas (App Store)     mas upgrade
+#   Headroom (pipx)     headroom update -y
 #
 # Security audit (always runs after updates):
 #   npm audit           scans global npm packages for known CVEs
@@ -96,6 +97,7 @@ HAS_PIP=false;     command -v pip3    &>/dev/null && HAS_PIP=true
 HAS_GEM=false;     command -v gem     &>/dev/null && HAS_GEM=true
 HAS_RUSTUP=false;  command -v rustup  &>/dev/null && HAS_RUSTUP=true
 HAS_MAS=false;     command -v mas     &>/dev/null && HAS_MAS=true
+HAS_HEADROOM=false; command -v headroom &>/dev/null && HAS_HEADROOM=true
 HAS_PIPAUDIT=false; command -v pip-audit &>/dev/null && HAS_PIPAUDIT=true
 
 # ── Major version bump detection ──────────────────────────────────────────────
@@ -129,6 +131,7 @@ echo "  Tools detected: $(
   $HAS_GEM     && tools+=("gem")
   $HAS_RUSTUP  && tools+=("rustup")
   $HAS_MAS     && tools+=("mas")
+  $HAS_HEADROOM && tools+=("headroom")
   [[ ${#tools[@]} -eq 0 ]] && echo "none" || echo "${tools[*]}"
 )"
 echo "  Audit tools: $(
@@ -295,6 +298,20 @@ if $HAS_MAS; then
   ok "App Store apps upgraded"
 else
   skipped "mas — not installed (install with: brew install mas)"
+fi
+
+# ── 7. Headroom (pipx) ──────────────────────────────────────────────────────
+if $HAS_HEADROOM; then
+  log "Updating Headroom..."
+  if $DRY_RUN; then
+    echo "      [dry-run] headroom update -y"
+    headroom update --check 2>&1 | sed 's/^/      [dry-run] /' || true
+  else
+    headroom update -y 2>&1 | sed 's/^/      /' || true
+  fi
+  ok "Headroom updated"
+else
+  skipped "headroom — not installed"
 fi
 
 # ── Security Audit ────────────────────────────────────────────────────────────

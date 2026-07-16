@@ -13,6 +13,7 @@ A single script to update all package managers and global packages on macOS, wit
 | Ruby gems | `gem update` |
 | Rust toolchains | `rustup update` |
 | Mac App Store apps | `mas upgrade` *(requires [`mas`](https://github.com/mas-cli/mas))* |
+| Headroom (pipx) | `headroom update -y` *(requires `headroom`, installed via `pipx install headroom-ai`)* |
 
 Any tool that is not installed is skipped automatically — no errors, no configuration needed.
 
